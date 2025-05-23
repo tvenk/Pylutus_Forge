@@ -1,0 +1,3 @@
+def validator(ctx: ScriptContext) -> bool:
+    pylutus_pay("abc123", 2000000)
+    return True

@@ -1,0 +1,17 @@
+{
+    "def validator": "mkValidator",
+    "if": "if",
+    "else": "else",
+    "True": "True",
+    "False": "False",
+    "==": "==",
+    "+": "+",
+    "-": "-",
+    "*": "*",
+    "/": "/",
+    "return": "traceIfFalse",
+    "ctx.tx.inputs": "txInfoInputs ctx",
+    "ctx.tx.outputs": "txInfoOutputs $ scriptContextTxInfo ctx",
+    "signed_by": "txSignedBy ctx",
+    "pylutus_pay": "checkPayment ctx"
+}

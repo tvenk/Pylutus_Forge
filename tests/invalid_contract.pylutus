@@ -1,0 +1,2 @@
+def validator(ctx: ScriptContext) -> bool:
+    return 42
