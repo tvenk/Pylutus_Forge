@@ -38,8 +38,6 @@ def generate_haskell_code(ir, key_map):
             right = generate_condition(node.children[1])
             op = "==" if node.value == "Eq" else node.value.lower()
             return f"{left} {op} {right}"
-        elif node.node_type == "Name":
-            return node.value
         return "False"
 
     def generate_statement(node):
@@ -50,7 +48,7 @@ def generate_haskell_code(ir, key_map):
             elif value.node_type == "SigCheck":
                 pkh = key_map.get("pylutus_sig", {}).get("pubkeyhash", "PubKeyHash") + f" \"{value.value}\""
                 return f"traceIfFalse \"Signature check\" (txSignedBy ctx {pkh})"
-            return f"traceIfFalse \"Invalid return\" False"
+            return "traceIfFalse \"Invalid return\" False"
         elif node.node_type == "Pay":
             pkh = key_map.get("pylutus_pay", {}).get("pubkeyhash", "PubKeyHash") + f" \"{node.value['addr']}\""
             amount = node.value["amount"]
@@ -58,64 +56,94 @@ def generate_haskell_code(ir, key_map):
         elif node.node_type == "SigCheck":
             pkh = key_map.get("pylutus_sig", {}).get("pubkeyhash", "PubKeyHash") + f" \"{node.value}\""
             return f"traceIfFalse \"Signature check\" (txSignedBy ctx {pkh})"
-        return f"traceIfFalse \"Invalid\" False"
+        return "traceIfFalse \"Invalid\" False"
 
-    def generate_body(node, indent=4):
-        prefix = " " * indent
-        print(f"DEBUG: Processing node {node.node_type} with children {[c.node_type for c in node.children]}")
+    def generate_body(node, indent=1):
+        prefix = "    " * indent
+        
         if node.node_type == "If":
-            test_code = generate_condition(node.children[0])
-            then_nodes = node.children[1:len(node.children)//2 + 1]
-            result = [f"{prefix}if {test_code} then ("]
+            condition = generate_condition(node.children[0])
+            result = [f"{prefix}if {condition} then ("]
+            
+            # Process then branch
             then_statements = []
-            has_return = False
-            for child in then_nodes:
-                print(f"DEBUG: Processing then child {child.node_type}")
-                if child.node_type == "Return":
-                    then_statements.append(f"{prefix}    {generate_statement(child)}")
-                    has_return = True
-                elif child.node_type == "Pay":
-                    then_statements.append(f"{prefix}    {generate_statement(child)}")
-                elif child.node_type == "SigCheck":
-                    then_statements.append(f"{prefix}    {generate_statement(child)}")
-            if then_statements:
-                result.extend([f"{stmt} &&" for stmt in then_statements])
-                if not has_return:
-                    result.append(f"{prefix}    traceIfFalse \"Return\" True &&")
+            else_statements = []
+            in_else = False
+            
+            for child in node.children[1:]:
+                if child.node_type == "Return" and child.children[0].node_type == "Bool" and not child.children[0].value:
+                    in_else = True
+                    continue
+                
+                if not in_else:
+                    if child.node_type in ["Pay", "Return", "SigCheck"]:
+                        then_statements.append(generate_statement(child))
+                else:
+                    if child.node_type in ["Pay", "Return", "SigCheck"]:
+                        else_statements.append(generate_statement(child))
+            
+            # Add then statements
+            for stmt in then_statements:
+                result.append(f"{prefix}    {stmt}")
+            
+            # Add return/valid for then branch
+            has_then_return = any("Return" in stmt for stmt in then_statements)
+            if not has_then_return:
+                result.append(f"{prefix}    traceIfFalse \"Return\" True")
+            result.append(f"{prefix}    traceIfFalse \"Valid\" True")
+            
+            # Add else branch
+            result.append(f"{prefix}) else (")
+            if else_statements:
+                for stmt in else_statements:
+                    result.append(f"{prefix}    {stmt}")
+                has_else_return = any("Return" in stmt for stmt in else_statements)
+                if not has_else_return:
+                    result.append(f"{prefix}    traceIfFalse \"Return\" True")
                 result.append(f"{prefix}    traceIfFalse \"Valid\" True")
             else:
-                result.append(f"{prefix}    traceIfFalse \"Valid\" True")
-            result.append(f"{prefix}) else (")
-            result.append(f"{prefix}    traceIfFalse \"Invalid\" False")
+                result.append(f"{prefix}    traceIfFalse \"Invalid\" False")
+            
             result.append(f"{prefix})")
             return result
         else:
+            # Handle non-If nodes
             statements = []
             has_return = False
+            
             for child in node.children:
-                print(f"DEBUG: Processing child {child.node_type}")
                 if child.node_type in ["Pay", "SigCheck"]:
-                    statements.append(f"{prefix}{generate_statement(child)}")
+                    statements.append(generate_statement(child))
                 elif child.node_type == "Return":
-                    statements.append(f"{prefix}{generate_statement(child)}")
-                    has_return = True
-            if statements:
-                result = [f"{stmt} &&" for stmt in statements]
-                if not has_return:
-                    result.append(f"{prefix}traceIfFalse \"Return\" True &&")
-                result.append(f"{prefix}traceIfFalse \"Valid\" True")
-                return result
-            return [f"{prefix}traceIfFalse \"Valid\" True"]
+                    stmt = generate_statement(child)
+                    statements.append(stmt)
+                    if "Return" in stmt:
+                        has_return = True
+                elif child.node_type == "If":
+                    statements.extend(generate_body(child, indent))
+                    return statements  # If node handles its own return/valid
+            
+            result = []
+            for stmt in statements:
+                result.append(f"{prefix}{stmt}")
+            
+            if not has_return:
+                result.append(f"{prefix}traceIfFalse \"Return\" True")
+            result.append(f"{prefix}traceIfFalse \"Valid\" True")
+            
+            return result
 
     body_lines = generate_body(ir)
     lines.extend(body_lines)
 
-    lines.extend([
-        "",
-        "checkPayment :: ScriptContext -> PubKeyHash -> Integer -> Bool",
-        "checkPayment ctx pkh amount =",
-        "    any (\\o -> txOutValue o == lovelaceValueOf amount && txOutAddress o == pubKeyHashAddress pkh) (txInfoOutputs $ scriptContextTxInfo ctx)"
-    ])
+    # Add checkPayment function if needed
+    if any("checkPayment" in line for line in body_lines):
+        lines.extend([
+            "",
+            "checkPayment :: ScriptContext -> PubKeyHash -> Integer -> Bool",
+            "checkPayment ctx pkh amount =",
+            "    any (\\o -> txOutValue o == lovelaceValueOf amount && txOutAddress o == pubKeyHashAddress pkh) (txInfoOutputs $ scriptContextTxInfo ctx)"
+        ])
 
     return "\n".join(lines)
 
@@ -161,11 +189,6 @@ def main():
             print(error)
         return
 
-    print(f"DEBUG: Full IR structure: node {ir.node_type} with children {[c.node_type for c in ir.children]}")
-    if ir.children:
-        for child in ir.children:
-            print(f"DEBUG: Child node {child.node_type} with children {[gc.node_type for gc in child.children]}")
-
     key_map = load_key_map("pylutus_key.json")
     haskell_code = generate_haskell_code(ir.children[0], key_map)
 
@@ -176,4 +199,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

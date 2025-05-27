@@ -4,7 +4,13 @@ import PlutusTx.Prelude
 import Plutus.V1.Ledger.Api
 mkValidator :: Datum -> Redeemer -> ScriptContext -> Bool
 mkValidator datum redeemer ctx =
-    traceIfFalse "Valid" True
+    if datum == "escrow" && redeemer == "release" then (
+        traceIfFalse "Payment failed" (checkPayment ctx PubKeyHash "abc123" 2000000)
+        traceIfFalse "Return" True
+        traceIfFalse "Valid" True
+    ) else (
+        traceIfFalse "Invalid" False
+    )
 
 checkPayment :: ScriptContext -> PubKeyHash -> Integer -> Bool
 checkPayment ctx pkh amount =
