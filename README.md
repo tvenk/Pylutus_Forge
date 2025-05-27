@@ -170,19 +170,6 @@ checkPayment ctx pkh amount =
 | 🧪 Auto Test Harness (golden test output) | 🔜     |
 | 🚀 On-chain Validator Build & Deploy CLI  | 🔜     |
 
----
-
-## 🧪 Run Unit Tests
-
-```bash
-python3 test_ast_parser_updated.py
-python3 test_type_checker.py
-python3 test_semantic_validator.py
-python3 test_symbol_table.py
-python3 test_utils.py
-```
-
----
 
 ## 📝 License
 
