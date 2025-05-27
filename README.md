@@ -1,10 +1,7 @@
----
-
 # Pylutus Forge
 
 **Pylutus Forge** is a Python-to-Plutus compiler designed to let developers write Cardano smart contracts in Python-like syntax. It translates `.pylutus` files into valid Plutus (Haskell) code ready for on-chain deployment on the Cardano blockchain.
 
----
 
 ## 📁 Directory Structure
 
