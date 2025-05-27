@@ -194,6 +194,4 @@ MIT License
 
 **Author**: tvenk
 **GitHub**: [tvenk](https://github.com/tvenk)
-**LinkedIn**: [tbnv](https://www.linkedin.com/in/tbnv)
-
 ---
