@@ -1,6 +1,8 @@
+---
+
 # Pylutus Forge
 
-**Pylutus Forge** is a Python-to-Plutus compiler designed to enable developers to write Cardano smart contracts using Python-like syntax. These contracts are compiled into Plutus (Haskell) code suitable for on-chain deployment on the Cardano blockchain.
+**Pylutus Forge** is a Python-to-Plutus compiler designed to let developers write Cardano smart contracts in Python-like syntax. It translates `.pylutus` files into valid Plutus (Haskell) code ready for on-chain deployment on the Cardano blockchain.
 
 ---
 
@@ -13,7 +15,11 @@ pylutus_forge/
 │   ├── ast_parser.py
 │   ├── type_checker.py
 │   ├── semantic_validator.py
-│   └── utils.py
+│   ├── utils.py
+│   └── generator/
+│       ├── haskell_generator.py
+│       ├── intermediate_repr.py
+│       └── macros.py
 ├── tests/
 │   ├── easy_contract.pylutus
 │   ├── payment_contract.pylutus
@@ -37,42 +43,81 @@ pylutus_forge/
 
 ## 🚀 Overview
 
-Pylutus Forge lowers the barrier to entry for Cardano dApp developers by allowing them to write smart contracts in a clean, Pythonic domain-specific language (DSL) called **Pylutus**.
+**Pylutus Forge** reduces the barrier for Cardano dApp developers by enabling them to write smart contracts using a simple domain-specific language (DSL) built on Python.
 
-The tool compiles `.pylutus` files into valid Plutus scripts using the following pipeline:
+The tool compiles `.pylutus` files into Plutus scripts using the following stages:
 
-* **Parser**: Processes `.pylutus` files, stripping comments and parsing Python-like syntax (`if/else`, `return`, etc.).
-* **Type Checker**: Ensures type safety (e.g., `ctx: ScriptContext`, `bool` returns).
-* **Semantic Validator**: Detects invalid or non-deterministic logic (e.g., unreachable code).
-* **Macro Engine**: Replaces custom Pylutus functions like `pylutus_sig(...)` and `pylutus_pay(...)` using `pylutus_key.json`.
-* **Code Generator**: Outputs clean Haskell code with `PlutusTx` support and proper smart contract structure.
-* **Validator Compiler**: Generates validators for signature and payment conditions with `mkValidator`.
+* **Parser**: Extracts functions and logic from Python-style syntax (`if/else`, `return`, etc.).
+* **Type Checker**: Ensures type safety and enforces Cardano-specific constraints.
+* **Semantic Validator**: Detects non-deterministic or unreachable logic.
+* **Macro Engine**: Expands `pylutus_sig(...)`, `pylutus_pay(...)` using external key maps (`pylutus_key.json`).
+* **Intermediate Representation (IR)**: Organizes logic in an abstract layer before Haskell generation.
+* **Code Generator**: Emits valid Plutus code using `PlutusTx` libraries and templates.
 
 ---
 
 ## ✅ Phase 1 — Core Compiler (Complete)
 
-* 🔍 **Parser**: Python-like syntax support (`def`, `if`, `return`).
-* 🔧 **Macro Expansion**: Converts custom commands into valid Plutus primitives.
-* ⚙️ **Haskell Code Generation**: Uses `traceIfFalse`, `mkValidator`, and correct PlutusTx types.
-* 🔐 **Validator Logic**: Supports signature validation with `pylutus_sig`.
-* 📄 **Output**: Writes `output_contract.hs`, ready for on-chain deployment.
+* 🔍 **AST Parser**: Supports `def`, `if/else`, `return`, `pylutus_*()` syntax.
+* 🧰 **Macro Engine**: Custom DSL functions expanded to Plutus primitives.
+* ⚙️ **Haskell Code Generator**: Emits traceable, valid Haskell scripts.
+* 🔐 **Basic Validator Logic**: Signature checks using `txSignedBy`.
+* 📄 **Output**: Final contract is written to `output_contract.hs`.
 
 ---
 
-## ✅ Phase 2 — Type System & Validation (Complete)
+## ✅ Phase 2 — Type System & Semantic Validation (Complete)
 
-* 🧠 **Static Type Checker**: Ensures `ctx: ScriptContext` and `bool` return types, catching errors like `return 42`.
-* 🔍 **Semantic Validator**: Detects unreachable code (e.g., `if True`) and invalid payment amounts (< 1 ADA).
-* 🧾 **Symbol Table**: Tracks variable types and scopes for robust validation.
-* 🛠️ **Enhanced CLI**: `pylutus_forge.py` orchestrates parsing, type checking, semantic validation, and compilation with clear error reporting.
-* 💸 **Payment Logic**: Implements `pylutus_pay` for transaction output validations (e.g., payments to specific addresses).
+* 🧠 **Static Type Checker**: Verifies `ctx: ScriptContext` and return types.
+* 🧾 **Symbol Table**: Tracks scope, variable types, and function correctness.
+* 🛑 **Semantic Validator**: Catches unreachable conditions, illogical `if True`, etc.
+* 💸 **Payment Support**: `pylutus_pay(...)` enforces amount/address checks.
 
 ---
 
-### ✅ Example Usage
+## ✅ Phase 3 — IR + Multi-Clause Support (Complete)
 
-**Source** (`tests/complex_contract.pylutus`):
+* 🧱 **Typed Intermediate Representation (IR)**: Enables modular and testable contract logic flow.
+* 🧩 **Multi-Clause Handling**: Correct translation of nested `if/else` branches.
+* 🔗 **Chained Logic**: Inline boolean logic, multiple condition guards supported.
+* 📐 **Consistent Haskell Structure**: Output is clean, minimal, and idiomatic.
+
+---
+
+## 🚧 Phase 4 — In Progress
+
+⚠️ Minor Gaps and Improvements to Consider
+These don’t prevent it from working, but prevent it from being mature production tooling:
+
+* ❌ **Unused Function Emission**
+  Helper functions like `checkPayment` are always emitted even if not referenced. This affects code hygiene and should be optimized.
+
+* ❌ **No Real Type Checker Yet**
+  Invalid Python-style contracts (e.g., wrong args to `pylutus_sig()`) may not fail gracefully or provide meaningful errors. A robust transpiler should validate DSL syntax and types before IR generation.
+
+* ❌ **Missing Pythonic Extras**
+  Currently unsupported but highly desirable features include:
+
+  * Contract-level docstrings
+  * Constant definitions (e.g., `OWNER = "abc123"`)
+  * Decorators or Python-style annotations
+    These additions would improve DSL expressiveness and developer experience.
+
+* ❌ **Deployment Pipeline**
+  The current tool generates Plutus code but lacks:
+
+  * Haskell formatting / linting
+  * UPLC generation
+  * On-chain validator test stubs
+    These features are expected in production-ready tooling.
+
+---
+
+## 📦 How to Use
+
+### 1. Write a `.pylutus` contract:
+
+**`tests/complex_contract.pylutus`**:
 
 ```python
 def validator(ctx: ScriptContext) -> bool:
@@ -83,16 +128,17 @@ def validator(ctx: ScriptContext) -> bool:
         return False
 ```
 
-**Compile**:
+### 2. Compile it:
 
 ```bash
 python3 pylutus_forge.py tests/complex_contract.pylutus
 ```
 
-**Output** (`output_contract.hs`):
+### 3. Result:
+
+**`output_contract.hs`**:
 
 ```haskell
--- Auto-generated by Pylutus Forge
 {-# INLINABLE mkValidator #-}
 import PlutusTx.Prelude
 import Plutus.V1.Ledger.Api
@@ -113,66 +159,43 @@ checkPayment ctx pkh amount =
         (txInfoOutputs $ scriptContextTxInfo ctx)
 ```
 
-This generates a Plutus validator that checks for a signature from `abc123` and a payment of 2 ADA to `def456`.
+---
+
+## 🔭 Phase 5 and Beyond — Production Tooling
+
+| Feature                                   | Status |
+| ----------------------------------------- | ------ |
+| 🧠 Type Safety on Macros                  | 🔜     |
+| 📏 Inline Constants                       | 🔜     |
+| ✍️ Better Error Messages                  | 🔜     |
+| 📦 Haskell Formatter + Plutus CLI hooks   | 🔜     |
+| 💬 Docstring and Metadata Support         | 🔜     |
+| 🧪 Auto Test Harness (golden test output) | 🔜     |
+| 🚀 On-chain Validator Build & Deploy CLI  | 🔜     |
 
 ---
 
-## 🚧 Phase 3 — Future Roadmap
-
-* 🧱 **Intermediate Representation (IR)**: Robust Haskell code generation via a typed IR layer.
-* 🔄 **Full PlutusTx Type Mapping**: Better handling of Plutus types for complex contracts.
-* 🧰 **Code Templates**: Include ready-made templates for validators, scripts, redeemers, etc.
-* 🧠 **IDE Tooling**: VS Code plugin with syntax highlighting, hints, and code completion.
-
----
-
-## 📦 How to Use
-
-Write your smart contract in the `tests/` folder using `.pylutus` syntax.
-
-Example contract (`tests/payment_contract.pylutus`):
-
-```python
-def validator(ctx: ScriptContext) -> bool:
-    pylutus_pay("abc123", 2000000)
-    return True
-```
-
-Compile it:
+## 🧪 Run Unit Tests
 
 ```bash
-python3 pylutus_forge.py tests/payment_contract.pylutus
-```
-
-Output will be generated in:
-
-```bash
-output_contract.hs
-```
-
-Test the compiler with provided test scripts:
-
-```bash
-python3 test_symbol_table.py
 python3 test_ast_parser_updated.py
 python3 test_type_checker.py
 python3 test_semantic_validator.py
+python3 test_symbol_table.py
 python3 test_utils.py
 ```
-
-Deploy using Cardano tooling.
 
 ---
 
 ## 📝 License
 
-This project is open-source and available under the MIT License.
+MIT License
 
 ---
 
 ## 📬 Contact
 
-**Author**: tvenk
+**Author**: Thushal Bharadwaj Nelamane Venkatesh (aka *Bomman*)
 **GitHub**: [tvenk](https://github.com/tvenk)
 **LinkedIn**: [tbnv](https://www.linkedin.com/in/tbnv)
 
