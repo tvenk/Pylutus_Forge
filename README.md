@@ -192,7 +192,7 @@ MIT License
 
 ## 📬 Contact
 
-**Author**: Thushal Bharadwaj Nelamane Venkatesh (aka *Bomman*)
+**Author**: tvenk
 **GitHub**: [tvenk](https://github.com/tvenk)
 **LinkedIn**: [tbnv](https://www.linkedin.com/in/tbnv)
 
