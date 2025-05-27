@@ -1,0 +1,29 @@
+{
+    "name": "pylutus-language",
+    "displayName": "Pylutus Language Support",
+    "description": "Syntax highlighting for Pylutus, a Python-like DSL for Cardano smart contracts",
+    "version": "0.0.2",
+    "engines": {
+        "vscode": "^1.60.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [
+            {
+                "id": "pylutus",
+                "aliases": ["Pylutus", "pylutus"],
+                "extensions": [".pylutus"],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "pylutus",
+                "scopeName": "source.pylutus",
+                "path": "./syntaxes/pylutus.yaml"
+            }
+        ]
+    }
+}

@@ -1,0 +1,28 @@
+name: Pylutus
+scopeName: source.pylutus
+fileTypes: [.pylutus]
+patterns:
+  - include: '#keywords'
+  - include: '#strings'
+  - include: '#comments'
+  - include: '#functions'
+repository:
+  keywords:
+    patterns:
+      - name: keyword.control.pylutus
+        match: \b(def|if|else|return)\b
+  strings:
+    name: string.quoted.double.pylutus
+    begin: '"'
+    end: '"'
+    patterns:
+      - name: constant.character.escape.pylutus
+        match: \\.
+  comments:
+    patterns:
+      - name: comment.line.number-sign.pylutus
+        match: #.*$
+  functions:
+    patterns:
+      - name: entity.name.function.pylutus
+        match: \b(pylutus_sig|pylutus_pay|pylutus_datum|pylutus_redeemer)\b

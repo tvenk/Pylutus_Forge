@@ -2,9 +2,10 @@
 {-# INLINABLE mkValidator #-}
 import PlutusTx.Prelude
 import Plutus.V1.Ledger.Api
-mkValidator :: ScriptContext -> Bool
-mkValidator ctx =
-    (traceIfFalse "Payment failed" (checkPayment ctx (PubKeyHash "abc123") 2000000) && traceIfFalse "Return" True)
+mkValidator :: Datum -> Redeemer -> ScriptContext -> Bool
+mkValidator datum redeemer ctx =
+    traceIfFalse "Valid" True
+
 checkPayment :: ScriptContext -> PubKeyHash -> Integer -> Bool
 checkPayment ctx pkh amount =
     any (\o -> txOutValue o == lovelaceValueOf amount && txOutAddress o == pubKeyHashAddress pkh) (txInfoOutputs $ scriptContextTxInfo ctx)

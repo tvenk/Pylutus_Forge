@@ -28,11 +28,15 @@ class PylutusParser:
                 self.errors.append(f"Invalid function name '{node.name}' at line {node.lineno}. Expected 'validator'.")
                 return None
             args = [arg.arg for arg in node.args.args]
-            if len(args) != 1 or args[0] != "ctx":
-                self.errors.append(f"Invalid arguments at line {node.lineno}. Expected 'ctx'.")
+            if len(args) == 1 and args[0] == "ctx":
+                return PylutusNode("FunctionDef", value={"name": node.name, "args": ["ctx"]}, 
+                                  children=[self._convert_ast(n) for n in node.body], line_no=node.lineno)
+            elif len(args) == 3 and args[0] == "datum" and args[1] == "redeemer" and args[2] == "ctx":
+                return PylutusNode("FunctionDef", value={"name": node.name, "args": ["datum", "redeemer", "ctx"]}, 
+                                  children=[self._convert_ast(n) for n in node.body], line_no=node.lineno)
+            else:
+                self.errors.append(f"Invalid arguments at line {node.lineno}. Expected 'ctx' or 'datum, redeemer, ctx'.")
                 return None
-            return PylutusNode("FunctionDef", value={"name": node.name}, 
-                             children=[self._convert_ast(n) for n in node.body], line_no=node.lineno)
         
         elif isinstance(node, ast.If):
             test = self._convert_ast(node.test)
@@ -61,6 +65,25 @@ class PylutusParser:
                     self.errors.append(f"Invalid pylutus_pay call at line {node.lineno}.")
                     return None
                 return PylutusNode("PylutusPay", value={"addr": node.args[0].s, "amount": node.args[1].n}, line_no=node.lineno)
+            elif isinstance(node.func, ast.Name) and node.func.id == "pylutus_datum":
+                if len(node.args) != 1 or not isinstance(node.args[0], ast.Str):
+                    self.errors.append(f"Invalid pylutus_datum call at line {node.lineno}.")
+                    return None
+                return PylutusNode("PylutusDatum", value=node.args[0].s, line_no=node.lineno)
+            elif isinstance(node.func, ast.Name) and node.func.id == "pylutus_redeemer":
+                if len(node.args) != 1 or not isinstance(node.args[0], ast.Str):
+                    self.errors.append(f"Invalid pylutus_redeemer call at line {node.lineno}.")
+                    return None
+                return PylutusNode("PylutusRedeemer", value=node.args[0].s, line_no=node.lineno)
+        
+        elif isinstance(node, ast.BoolOp):
+            if isinstance(node.op, ast.And):
+                op = "And"
+            else:
+                self.errors.append(f"Only 'and' operator supported at line {node.lineno}.")
+                return None
+            children = [self._convert_ast(n) for n in node.values]
+            return PylutusNode("BoolOp", value=op, children=children, line_no=node.lineno)
         
         elif isinstance(node, ast.Compare):
             if len(node.ops) != 1 or len(node.comparators) != 1:
@@ -68,8 +91,8 @@ class PylutusParser:
                 return None
             left = self._convert_ast(node.left)
             right = self._convert_ast(node.comparators[0])
-            op = type(node.ops[0]).__name__
-            return PylutusNode("Compare", value=op, children=[left, right], line_no=node.lineno)
+            op_type = type(node.ops[0]).__name__
+            return PylutusNode("Compare", value=op_type, children=[left, right], line_no=node.lineno)
         
         elif isinstance(node, ast.Name):
             return PylutusNode("Name", value=node.id, line_no=node.lineno)

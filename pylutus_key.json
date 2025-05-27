@@ -1,17 +1,17 @@
 {
-    "def validator": "mkValidator",
-    "if": "if",
-    "else": "else",
-    "True": "True",
-    "False": "False",
-    "==": "==",
-    "+": "+",
-    "-": "-",
-    "*": "*",
-    "/": "/",
-    "return": "traceIfFalse",
-    "ctx.tx.inputs": "txInfoInputs ctx",
-    "ctx.tx.outputs": "txInfoOutputs $ scriptContextTxInfo ctx",
-    "signed_by": "txSignedBy ctx",
-    "pylutus_pay": "checkPayment ctx"
+    "pylutus_sig": {
+        "type": "signature",
+        "pubkeyhash": "PubKeyHash"
+    },
+    "pylutus_pay": {
+        "type": "payment",
+        "pubkeyhash": "PubKeyHash"
+    },
+    "pylutus_datum": {
+        "type": "datum"
+    },
+    "pylutus_redeemer": {
+        "type": "redeemer"
+    }
 }
+

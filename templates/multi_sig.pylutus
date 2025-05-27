@@ -1,0 +1,5 @@
+def validator(datum: Datum, redeemer: Redeemer, ctx: ScriptContext) -> bool:
+    if pylutus_sig("abc123") and pylutus_sig("def456"):
+        return True
+    else:
+        return False
